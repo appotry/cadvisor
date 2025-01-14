@@ -67,6 +67,12 @@ type FakeSysFs struct {
 	physicalPackageIDs   map[string]string
 	physicalPackageIDErr map[string]error
 
+	bookIDs   map[string]string
+	bookIDErr map[string]error
+
+	drawerIDs   map[string]string
+	drawerIDErr map[string]error
+
 	memTotal string
 	memErr   error
 
@@ -75,6 +81,9 @@ type FakeSysFs struct {
 
 	hugePagesNr    map[string]string
 	hugePagesNrErr error
+
+	distances    map[string]string
+	distancesErr error
 
 	onlineCPUs map[string]interface{}
 }
@@ -93,6 +102,14 @@ func (fs *FakeSysFs) GetCoreID(coreIDPath string) (string, error) {
 
 func (fs *FakeSysFs) GetCPUPhysicalPackageID(cpuPath string) (string, error) {
 	return fs.physicalPackageIDs[cpuPath], fs.physicalPackageIDErr[cpuPath]
+}
+
+func (fs *FakeSysFs) GetBookID(coreIDPath string) (string, error) {
+	return fs.bookIDs[coreIDPath], fs.bookIDErr[coreIDPath]
+}
+
+func (fs *FakeSysFs) GetDrawerID(coreIDPath string) (string, error) {
+	return fs.drawerIDs[coreIDPath], fs.drawerIDErr[coreIDPath]
 }
 
 func (fs *FakeSysFs) GetMemInfo(nodePath string) (string, error) {
@@ -123,6 +140,10 @@ func (fs *FakeSysFs) GetBlockDeviceScheduler(name string) (string, error) {
 
 func (fs *FakeSysFs) GetBlockDeviceNumbers(name string) (string, error) {
 	return "8:0\n", nil
+}
+
+func (fs *FakeSysFs) IsBlockDeviceHidden(name string) (bool, error) {
+	return false, nil
 }
 
 func (fs *FakeSysFs) GetNetworkDevices() ([]os.FileInfo, error) {
@@ -178,6 +199,16 @@ func (fs *FakeSysFs) SetPhysicalPackageIDs(physicalPackageIDs map[string]string,
 	fs.physicalPackageIDErr = physicalPackageIDErrors
 }
 
+func (fs *FakeSysFs) SetBookIDs(bookIDs map[string]string, bookIDErrors map[string]error) {
+	fs.bookIDs = bookIDs
+	fs.bookIDErr = bookIDErrors
+}
+
+func (fs *FakeSysFs) SetDrawerIDs(drawerIDs map[string]string, drawerIDErrors map[string]error) {
+	fs.drawerIDs = drawerIDs
+	fs.drawerIDErr = drawerIDErrors
+}
+
 func (fs *FakeSysFs) SetMemory(memTotal string, err error) {
 	fs.memTotal = memTotal
 	fs.memErr = err
@@ -199,6 +230,27 @@ func (fs *FakeSysFs) SetEntryName(name string) {
 
 func (fs *FakeSysFs) GetSystemUUID() (string, error) {
 	return "1F862619-BA9F-4526-8F85-ECEAF0C97430", nil
+}
+
+func (fs *FakeSysFs) GetDistances(nodeDir string) (string, error) {
+	if fs.distancesErr != nil {
+		return "", fs.distancesErr
+	}
+
+	if _, ok := fs.distances[nodeDir]; !ok {
+		return "", fmt.Errorf("distance not found")
+	}
+
+	return fs.distances[nodeDir], nil
+}
+
+func (fs *FakeSysFs) SetDistances(nodeDir string, distances string, err error) {
+	if fs.distances == nil {
+		fs.distances = map[string]string{nodeDir: distances}
+	} else {
+		fs.distances[nodeDir] = distances
+	}
+	fs.distancesErr = err
 }
 
 func (fs *FakeSysFs) IsCPUOnline(dir string) bool {

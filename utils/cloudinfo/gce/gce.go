@@ -15,7 +15,8 @@
 package gce
 
 import (
-	"io/ioutil"
+	"context"
+	"os"
 	"strings"
 
 	info "github.com/google/cadvisor/info/v1"
@@ -39,7 +40,7 @@ type provider struct{}
 var _ cloudinfo.CloudProvider = provider{}
 
 func (provider) IsActiveProvider() bool {
-	data, err := ioutil.ReadFile(gceProductName)
+	data, err := os.ReadFile(gceProductName)
 	if err != nil {
 		klog.V(2).Infof("Error while reading product_name: %v", err)
 		return false
@@ -48,7 +49,7 @@ func (provider) IsActiveProvider() bool {
 }
 
 func (provider) GetInstanceType() info.InstanceType {
-	machineType, err := metadata.Get("instance/machine-type")
+	machineType, err := metadata.GetWithContext(context.TODO(), "instance/machine-type")
 	if err != nil {
 		return info.UnknownInstance
 	}
@@ -58,7 +59,7 @@ func (provider) GetInstanceType() info.InstanceType {
 }
 
 func (provider) GetInstanceID() info.InstanceID {
-	instanceID, err := metadata.Get("instance/id")
+	instanceID, err := metadata.GetWithContext(context.TODO(), "instance/id")
 	if err != nil {
 		return info.UnknownInstance
 	}

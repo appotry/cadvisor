@@ -11,7 +11,7 @@ cAdvisor has native support for [Docker](https://github.com/docker/docker) conta
 To quickly tryout cAdvisor on your machine with Docker, we have a Docker image that includes everything you need to get started. You can run a single cAdvisor to monitor the whole machine. Simply run:
 
 ```
-VERSION=v0.36.0 # use the latest release version from https://github.com/google/cadvisor/releases
+VERSION=v0.49.1 # use the latest release version from https://github.com/google/cadvisor/releases
 sudo docker run \
   --volume=/:/rootfs:ro \
   --volume=/var/run:/var/run:ro \
@@ -73,7 +73,7 @@ Please reach out and get involved in the project, we're actively looking for mor
 ### Core Team
 * [@bobbypage, Google](https://github.com/bobbypage)
 * [@iwankgb, Independent](https://github.com/iwankgb)
-* [@creatone, Intel](https://github.com/creatone)
+* [@creatone, Independent](https://github.com/creatone)
 * [@dims, VMWare](https://github.com/dims)
 * [@mrunalp, RedHat](https://github.com/mrunalp)
 
