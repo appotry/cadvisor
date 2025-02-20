@@ -57,7 +57,6 @@ const (
 	NetworkTcpUsageMetrics         MetricKind = "tcp"
 	NetworkAdvancedTcpUsageMetrics MetricKind = "advtcp"
 	NetworkUdpUsageMetrics         MetricKind = "udp"
-	AcceleratorUsageMetrics        MetricKind = "accelerator"
 	AppMetrics                     MetricKind = "app"
 	ProcessMetrics                 MetricKind = "process"
 	HugetlbUsageMetrics            MetricKind = "hugetlb"
@@ -67,6 +66,7 @@ const (
 	ResctrlMetrics                 MetricKind = "resctrl"
 	CPUSetMetrics                  MetricKind = "cpuset"
 	OOMMetrics                     MetricKind = "oom_event"
+	PressureMetrics                MetricKind = "pressure"
 )
 
 // AllMetrics represents all kinds of metrics that cAdvisor supported.
@@ -78,7 +78,6 @@ var AllMetrics = MetricSet{
 	MemoryNumaMetrics:              struct{}{},
 	CpuLoadMetrics:                 struct{}{},
 	DiskIOMetrics:                  struct{}{},
-	AcceleratorUsageMetrics:        struct{}{},
 	DiskUsageMetrics:               struct{}{},
 	NetworkUsageMetrics:            struct{}{},
 	NetworkTcpUsageMetrics:         struct{}{},
@@ -93,6 +92,15 @@ var AllMetrics = MetricSet{
 	ResctrlMetrics:                 struct{}{},
 	CPUSetMetrics:                  struct{}{},
 	OOMMetrics:                     struct{}{},
+	PressureMetrics:                struct{}{},
+}
+
+// AllNetworkMetrics represents all network metrics that cAdvisor supports.
+var AllNetworkMetrics = MetricSet{
+	NetworkUsageMetrics:            struct{}{},
+	NetworkTcpUsageMetrics:         struct{}{},
+	NetworkAdvancedTcpUsageMetrics: struct{}{},
+	NetworkUdpUsageMetrics:         struct{}{},
 }
 
 func (mk MetricKind) String() string {
@@ -104,6 +112,15 @@ type MetricSet map[MetricKind]struct{}
 func (ms MetricSet) Has(mk MetricKind) bool {
 	_, exists := ms[mk]
 	return exists
+}
+
+func (ms MetricSet) HasAny(ms1 MetricSet) bool {
+	for m := range ms1 {
+		if _, ok := ms[m]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (ms MetricSet) add(mk MetricKind) {
@@ -201,7 +218,9 @@ func InitializePlugins(factory info.MachineInfoFactory, fsInfo fs.FsInfo, includ
 	for name, plugin := range plugins {
 		watcher, err := plugin.Register(factory, fsInfo, includedMetrics)
 		if err != nil {
-			klog.V(5).Infof("Registration of the %s container factory failed: %v", name, err)
+			klog.Infof("Registration of the %s container factory failed: %v", name, err)
+		} else {
+			klog.Infof("Registration of the %s container factory successfully", name)
 		}
 		if watcher != nil {
 			containerWatchers = append(containerWatchers, watcher)

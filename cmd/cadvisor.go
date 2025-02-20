@@ -100,14 +100,13 @@ func init() {
 	optstr := container.AllMetrics.String()
 	flag.Var(&ignoreMetrics, "disable_metrics", fmt.Sprintf("comma-separated list of `metrics` to be disabled. Options are %s.", optstr))
 	flag.Var(&enableMetrics, "enable_metrics", fmt.Sprintf("comma-separated list of `metrics` to be enabled. If set, overrides 'disable_metrics'. Options are %s.", optstr))
-
-	// Default logging verbosity to V(2)
-	_ = flag.Set("v", "2")
 }
 
 func main() {
 	klog.InitFlags(nil)
 	defer klog.Flush()
+	// Default logging verbosity to V(2)
+	_ = flag.Set("v", "2")
 	flag.Parse()
 
 	if *versionFlag {
@@ -156,6 +155,10 @@ func main() {
 	containerLabelFunc := metrics.DefaultContainerLabels
 	if !*storeContainerLabels {
 		whitelistedLabels := strings.Split(*whitelistedContainerLabels, ",")
+		// Trim spacing in labels
+		for i := range whitelistedLabels {
+			whitelistedLabels[i] = strings.TrimSpace(whitelistedLabels[i])
+		}
 		containerLabelFunc = metrics.BaseContainerLabels(whitelistedLabels)
 	}
 
@@ -228,7 +231,7 @@ func createCollectorHTTPClient(collectorCert, collectorKey string) http.Client {
 		}
 
 		tlsConfig.Certificates = []tls.Certificate{cert}
-		tlsConfig.BuildNameToCertificate()
+		tlsConfig.BuildNameToCertificate() //nolint: staticcheck
 	}
 
 	transport := &http.Transport{

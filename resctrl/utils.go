@@ -21,8 +21,8 @@ package resctrl
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -42,6 +42,8 @@ const (
 	cpusListFileName         = "cpus_list"
 	schemataFileName         = "schemata"
 	tasksFileName            = "tasks"
+	modeFileName             = "mode"
+	sizeFileName             = "size"
 	infoDirName              = "info"
 	monDataDirName           = "mon_data"
 	monGroupsDirName         = "mon_groups"
@@ -72,6 +74,8 @@ var (
 		monGroupsDirName: {},
 		schemataFileName: {},
 		tasksFileName:    {},
+		modeFileName:     {},
+		sizeFileName:     {},
 	}
 )
 
@@ -174,7 +178,7 @@ func prepareMonitoringGroup(containerName string, getContainerPids func() ([]str
 func getPids(containerName string) ([]int, error) {
 	if len(containerName) == 0 {
 		// No container name passed.
-		return nil, fmt.Errorf(noContainerNameError)
+		return nil, errors.New(noContainerNameError)
 	}
 	pids, err := cgroups.GetAllPids(filepath.Join(pidsPath, containerName))
 	if err != nil {
@@ -189,7 +193,7 @@ func getPids(containerName string) ([]int, error) {
 func getAllProcessThreads(path string) ([]int, error) {
 	processThreads := make([]int, 0)
 
-	threadDirs, err := ioutil.ReadDir(path)
+	threadDirs, err := os.ReadDir(path)
 	if err != nil {
 		return processThreads, err
 	}
@@ -208,7 +212,7 @@ func getAllProcessThreads(path string) ([]int, error) {
 // findGroup returns the path of a control/monitoring group in which the pids are.
 func findGroup(group string, pids []string, includeGroup bool, exclusive bool) (string, error) {
 	if len(pids) == 0 {
-		return "", fmt.Errorf(noPidsPassedError)
+		return "", errors.New(noPidsPassedError)
 	}
 
 	availablePaths := make([]string, 0)
@@ -216,7 +220,7 @@ func findGroup(group string, pids []string, includeGroup bool, exclusive bool) (
 		availablePaths = append(availablePaths, group)
 	}
 
-	files, err := ioutil.ReadDir(group)
+	files, err := os.ReadDir(group)
 	for _, file := range files {
 		if _, ok := groupDirectories[file.Name()]; !ok {
 			availablePaths = append(availablePaths, filepath.Join(group, file.Name()))
@@ -296,7 +300,7 @@ func readTasksFile(tasksPath string) (map[string]struct{}, error) {
 }
 
 func readStatFrom(path string, vendorID string) (uint64, error) {
-	context, err := ioutil.ReadFile(path)
+	context, err := os.ReadFile(path)
 	if err != nil {
 		return 0, err
 	}

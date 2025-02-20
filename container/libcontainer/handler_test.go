@@ -110,6 +110,20 @@ func TestSetCPUStats(t *testing.T) {
 				UsageInKernelmode: 734746 * nanosecondsInSeconds / clockTicks,
 				UsageInUsermode:   2767637 * nanosecondsInSeconds / clockTicks,
 			},
+			PSI: &cgroups.PSIStats{
+				Full: cgroups.PSIData{
+					Avg10:  0.3,
+					Avg60:  0.2,
+					Avg300: 0.1,
+					Total:  100,
+				},
+				Some: cgroups.PSIData{
+					Avg10:  0.6,
+					Avg60:  0.4,
+					Avg300: 0.2,
+					Total:  200,
+				},
+			},
 		},
 	}
 	var ret info.ContainerStats
@@ -122,6 +136,20 @@ func TestSetCPUStats(t *testing.T) {
 				User:   s.CpuStats.CpuUsage.UsageInUsermode,
 				System: s.CpuStats.CpuUsage.UsageInKernelmode,
 				Total:  33802947350272,
+			},
+			PSI: info.PSIStats{
+				Full: info.PSIData{
+					Avg10:  0.3,
+					Avg60:  0.2,
+					Avg300: 0.1,
+					Total:  100,
+				},
+				Some: info.PSIData{
+					Avg10:  0.6,
+					Avg60:  0.4,
+					Avg300: 0.2,
+					Total:  200,
+				},
 			},
 		},
 	}
@@ -295,4 +323,29 @@ func TestClearReferencedBytesWhenClearRefsMissing(t *testing.T) {
 	pids := []int{10}
 	err := clearReferencedBytes(pids, 0, 1)
 	assert.Nil(t, err)
+}
+
+var ulimits []info.UlimitSpec
+
+func BenchmarkProcessLimitsFile(b *testing.B) {
+	content, err := os.ReadFile("testdata/limits")
+	assert.Nil(b, err)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ulimits = processLimitsFile(string(content))
+	}
+
+	// Ensure the compiler doesn't optimize away the benchmark
+	_ = ulimits
+}
+
+func TestProcessMaxOpenFileLimitLine(t *testing.T) {
+	line := "            1073741816           1073741816           files     "
+
+	ulimit, err := processMaxOpenFileLimitLine("max_open_files", line)
+	assert.Nil(t, err)
+	assert.Equal(t, "max_open_files", ulimit.Name)
+	assert.Equal(t, int64(1073741816), ulimit.SoftLimit)
+	assert.Equal(t, int64(1073741816), ulimit.HardLimit)
 }

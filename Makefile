@@ -13,16 +13,9 @@
 # limitations under the License.
 
 GO := go
-GOLANGCI_VER := v1.42.1
+GOLANGCI_VER := 1.61.0
 GO_TEST ?= $(GO) test $(or $(GO_FLAGS),-race)
 arch ?= $(shell go env GOARCH)
-
-ifeq ($(arch), amd64)
-  Dockerfile_tag := ''
-else
-  Dockerfile_tag := '.''$(arch)'
-endif
-
 
 all: presubmit build test
 
@@ -76,10 +69,10 @@ release:
 	@./build/release.sh
 
 docker-%:
-	@docker build -t cadvisor:$(shell git rev-parse --short HEAD) -f deploy/Dockerfile$(Dockerfile_tag) .
+	@docker build -t cadvisor:$(shell git rev-parse --short HEAD) -f deploy/Dockerfile .
 
 docker-build:
-	@docker run --rm -w /go/src/github.com/google/cadvisor -v ${PWD}:/go/src/github.com/google/cadvisor golang:1.17 make build
+	@docker run --rm -w /go/src/github.com/google/cadvisor -v ${PWD}:/go/src/github.com/google/cadvisor golang:1.22 make build
 
 presubmit: lint
 	@echo ">> checking go mod tidy"
@@ -89,9 +82,15 @@ presubmit: lint
 
 lint:
 	@# This assumes GOPATH/bin is in $PATH -- if not, the target will fail.
-	@if ! golangci-lint version; then \
-		echo ">> installing golangci-lint $(GOLANGCI_VER)"; \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin $(GOLANGCI_VER); \
+	@# Extract the current golangci-lint version (empty if not installed),
+	@# then use GNU sort to check if GOT >= GOLANGCI_VER.
+	@GOT=$$(golangci-lint version 2>/dev/null | sed 's/^.* version \([^ ]*\) .*$$/\1/'); \
+	if ! printf $(GOLANGCI_VER)\\n$$GOT\\n | sort --version-sort --check=quiet; then \
+		echo ">> upgrading golangci-lint from $$GOT to $(GOLANGCI_VER)"; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v$(GOLANGCI_VER); \
+		GOT=$(GOLANGCI_VER); \
+	else \
+		echo ">> using installed golangci-lint $$GOT >= $(GOLANGCI_VER)"; \
 	fi
 	@echo ">> running golangci-lint using configuration at .golangci.yml"
 	@golangci-lint run
@@ -99,5 +98,6 @@ lint:
 
 clean:
 	@rm -f *.test cadvisor
+	@rm -rf _output/
 
 .PHONY: all build docker format release test test-integration lint presubmit tidy
